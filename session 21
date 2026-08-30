@@ -1,0 +1,177 @@
+# CNN Image Classification using Keras
+# CIFAR-10 Image Shape: (32, 32, 3)
+
+import numpy as np
+import tensorflow as tf
+from tensorflow.keras.models import Sequential
+from tensorflow.keras.layers import (
+    Conv2D,
+    MaxPooling2D,
+    BatchNormalization,
+    Flatten,
+    Dense,
+    Dropout
+)
+
+# ---------------------------------------------------------
+# Task 1, 2 and 3:
+# Create CNN model with Conv2D, BatchNormalization,
+# MaxPooling2D, Flatten, Dense and Dropout
+# ---------------------------------------------------------
+
+model = Sequential()
+
+# Conv2D layer with 32 filters, 3x3 kernel and ReLU
+# Input shape is (32, 32, 3), same as CIFAR-10 images
+model.add(Conv2D(
+    filters=32,
+    kernel_size=(3, 3),
+    activation='relu',
+    input_shape=(32, 32, 3)
+))
+
+# Batch Normalization after Conv2D
+model.add(BatchNormalization())
+
+# Max Pooling to reduce spatial dimensions
+model.add(MaxPooling2D(pool_size=(2, 2)))
+
+# Flatten the output
+model.add(Flatten())
+
+# Dropout to prevent overfitting
+model.add(Dropout(0.3))
+
+# Dense layer with 64 units and ReLU activation
+model.add(Dense(64, activation='relu'))
+
+# Output layer for 10 CIFAR-10 classes
+model.add(Dense(10, activation='softmax'))
+
+# Display model architecture
+model.summary()
+
+
+# ---------------------------------------------------------
+# Task 4:
+# Compile the model
+# ---------------------------------------------------------
+
+model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+# ---------------------------------------------------------
+# Generate random CIFAR-10-like data using NumPy
+# ---------------------------------------------------------
+
+# Number of training samples
+num_samples = 1000
+
+# Generate random image data
+# Shape: (1000, 32, 32, 3)
+X_train = np.random.random((num_samples, 32, 32, 3)).astype(np.float32)
+
+# Generate random class labels from 0 to 9
+y_labels = np.random.randint(0, 10, size=num_samples)
+
+# Convert labels into one-hot encoded format
+# Shape: (1000, 10)
+y_train = tf.keras.utils.to_categorical(y_labels, num_classes=10)
+
+
+# ---------------------------------------------------------
+# Train the model for 5 epochs
+# ---------------------------------------------------------
+
+history = model.fit(
+    X_train,
+    y_train,
+    epochs=5,
+    batch_size=32,
+    validation_split=0.2
+)
+
+
+# ---------------------------------------------------------
+# Task 5:
+# Suggested improvement:
+# Add another Conv2D + BatchNormalization layer.
+#
+# Why?
+# A deeper CNN can learn more complex image features.
+# BatchNormalization helps stabilize and speed up training.
+# ---------------------------------------------------------
+
+improved_model = Sequential()
+
+# First convolutional block
+improved_model.add(Conv2D(
+    32,
+    (3, 3),
+    activation='relu',
+    input_shape=(32, 32, 3)
+))
+improved_model.add(BatchNormalization())
+improved_model.add(MaxPooling2D(pool_size=(2, 2)))
+
+# Second convolutional block
+# This is the suggested architectural improvement
+improved_model.add(Conv2D(
+    64,
+    (3, 3),
+    activation='relu'
+))
+improved_model.add(BatchNormalization())
+improved_model.add(MaxPooling2D(pool_size=(2, 2)))
+
+# Flatten and regularization
+improved_model.add(Flatten())
+improved_model.add(Dropout(0.3))
+
+# Fully connected layer
+improved_model.add(Dense(64, activation='relu'))
+
+# Output layer
+improved_model.add(Dense(10, activation='softmax'))
+
+
+# Display improved model architecture
+improved_model.summary()
+
+
+# ---------------------------------------------------------
+# Compile the improved model
+# ---------------------------------------------------------
+
+improved_model.compile(
+    optimizer='adam',
+    loss='categorical_crossentropy',
+    metrics=['accuracy']
+)
+
+
+# ---------------------------------------------------------
+# Train the improved model for 5 epochs
+# ---------------------------------------------------------
+
+improved_history = improved_model.fit(
+    X_train,
+    y_train,
+    epochs=5,
+    batch_size=32,
+    validation_split=0.2
+)
+
+
+# ---------------------------------------------------------
+# Evaluate the improved model
+# ---------------------------------------------------------
+
+loss, accuracy = improved_model.evaluate(X_train, y_train, verbose=0)
+
+print("Improved Model Loss:", loss)
+print("Improved Model Accuracy:", accuracy)
