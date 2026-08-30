@@ -1,0 +1,248 @@
+# Daily step count for one week
+daily_steps = [6500, 7200, 6800, 8000, 7500, 9000, 8500]
+
+print("Daily step count:", daily_steps)
+
+# Explanation:
+# An RNN is suitable for predicting tomorrow's steps because
+# step counts form a time sequence. The number of steps today
+# can be related to the number of steps on previous days.
+# RNNs maintain a hidden state that carries information from
+# previous time steps, allowing the model to learn patterns
+# such as increasing, decreasing, or weekly activity trends.
+#
+# A standard feedforward neural network treats inputs more
+# independently and does not naturally maintain memory of
+# previous time steps.
+
+import numpy as np
+
+# Sequence of 5 numbers
+# Example: song play counts per day
+sequence = [100, 150, 130, 180, 200]
+
+# RNN parameters
+W = np.array([[0.01]])
+U = np.array([[0.5]])
+b = np.array([0.0])
+
+# Initial hidden state
+h = np.array([0.0])
+
+print("Initial hidden state:", h)
+
+# Process each value in the sequence
+for t, x in enumerate(sequence):
+
+    # Convert input to NumPy array
+    x_t = np.array([float(x)])
+
+    # RNN formula:
+    # h_t = tanh(Wx_t + Uh_(t-1) + b)
+    h = np.tanh(
+        W @ x_t +
+        U @ h +
+        b
+    )
+
+    print(f"Step {t + 1}: Input = {x}, Hidden State = {h}")
+
+print("\nFinal Hidden State:", h)\
+
+
+
+task 3
+import numpy as np
+
+# Sentence
+sentence = "I love cricket and IPL matches"
+
+# Split sentence into words
+words = sentence.split()
+
+# Create word-to-index mapping
+word_to_index = {
+    word: index + 1
+    for index, word in enumerate(words)
+}
+
+print("Word-to-Index Mapping:")
+print(word_to_index)
+
+# Convert sentence into integer sequence
+sequence = [word_to_index[word] for word in words]
+
+print("\nInteger Sequence:")
+print(sequence)
+
+
+# ---------------------------------------------------------
+# RNN parameters
+# ---------------------------------------------------------
+
+W = np.array([[0.2]])
+U = np.array([[0.5]])
+b = np.array([0.0])
+
+# Initial hidden state
+h = np.array([0.0])
+
+print("\nRNN Hidden States:")
+print("------------------------------")
+
+# Process every word one by one
+for t, word in enumerate(words):
+
+    # Current word represented by its integer index
+    x_t = np.array([float(sequence[t])])
+
+    # Update hidden state
+    h = np.tanh(
+        W @ x_t +
+        U @ h +
+        b
+    )
+
+    print(
+        f"Word: {word:8s} | "
+        f"Index: {sequence[t]} | "
+        f"Hidden State: {h}"
+    )
+
+Task 4: Vanishing Gradient Problem
+Explanation
+
+The vanishing gradient problem happens when an RNN is trained using Backpropagation Through Time and the gradients become extremely small as they are propagated backward through many time steps.
+
+Because the gradients become smaller and smaller, the network has difficulty learning relationships between events that are far apart in the sequence.
+
+For example, consider a text prediction system:
+
+"The player who scored the winning goal after several minutes of
+intense play was extremely ______."
+
+The correct prediction may depend on information that appeared many words earlier. If the RNN suffers from vanishing gradients, it may forget important earlier information and produce a poor prediction.
+
+Real-world example
+
+Speech recognition:
+In a long spoken sentence, an early word may provide important context for understanding a later word. A basic RNN affected by vanishing gradients may struggle to retain that earlier information, resulting in incorrect speech recognition.
+
+This is one reason architectures such as LSTM and GRU were developed—they are better at maintaining useful information over longer sequences.
+
+task 5
+import numpy as np
+
+# ---------------------------------------------------------
+# 3-step input sequence
+# ---------------------------------------------------------
+
+x = np.array([1.0, 2.0, 3.0])
+
+# Target output at each time step
+y_true = np.array([0.0, 1.0, 1.0])
+
+
+# ---------------------------------------------------------
+# RNN parameters
+# ---------------------------------------------------------
+
+W = 0.5       # Input-to-hidden weight
+U = 0.8       # Hidden-to-hidden weight
+V = 0.7       # Hidden-to-output weight
+b = 0.0       # Hidden bias
+c = 0.0       # Output bias
+
+
+# ---------------------------------------------------------
+# Forward pass
+# ---------------------------------------------------------
+
+h = [0.0]     # h[0] = initial hidden state
+y_pred = []
+
+for t in range(3):
+
+    # Calculate hidden state
+    h_t = np.tanh(
+        W * x[t] +
+        U * h[t] +
+        b
+    )
+
+    h.append(h_t)
+
+    # Calculate output
+    y_t = V * h_t + c
+
+    y_pred.append(y_t)
+
+
+# ---------------------------------------------------------
+# Calculate Mean Squared Error loss
+# ---------------------------------------------------------
+
+loss = 0
+
+for t in range(3):
+    loss += 0.5 * (y_pred[t] - y_true[t]) ** 2
+
+print("Hidden states:")
+print(h[1:])
+
+print("\nPredicted outputs:")
+print(y_pred)
+
+print("\nLoss:")
+print(loss)
+
+
+# ---------------------------------------------------------
+# Backpropagation Through Time
+# ---------------------------------------------------------
+
+dW = 0.0
+dU = 0.0
+dV = 0.0
+db = 0.0
+
+# Gradient flowing into the hidden state
+dh_next = 0.0
+
+# Go backwards through the sequence
+for t in reversed(range(3)):
+
+    # Gradient of loss with respect to output
+    dy = y_pred[t] - y_true[t]
+
+    # Gradient for output weight
+    dV += dy * h[t + 1]
+
+    # Gradient flowing into hidden state
+    dh = dy * V + dh_next
+
+    # Derivative of tanh
+    dtanh = (1 - h[t + 1] ** 2) * dh
+
+    # Gradient for input-to-hidden weight
+    dW += dtanh * x[t]
+
+    # Gradient for hidden-to-hidden weight
+    dU += dtanh * h[t]
+
+    # Gradient for hidden bias
+    db += dtanh
+
+    # Pass gradient to previous hidden state
+    dh_next = dtanh * U
+
+
+# ---------------------------------------------------------
+# Print gradients
+# ---------------------------------------------------------
+
+print("\nGradients obtained using BPTT:")
+print("dW =", dW)
+print("dU =", dU)
+print("dV =", dV)
+print("db =", db)
