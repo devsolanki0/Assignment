@@ -1,0 +1,262 @@
+# ============================================================
+# IMAGE PROCESSING AND DATA AUGMENTATION USING PYTHON
+# ============================================================
+
+# Install required libraries if needed:
+# pip install tensorflow opencv-python pillow matplotlib numpy
+
+import os
+import cv2
+import numpy as np
+import matplotlib.pyplot as plt
+
+from PIL import Image
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
+# ============================================================
+# TASK 1
+# Load 3 sample images and resize them to 224x224 pixels
+# Save resized images in a new folder
+# ============================================================
+
+# Create a folder for resized images
+os.makedirs("resized_images", exist_ok=True)
+
+# Put 3 images in the same folder as this Python file/notebook.
+# Change these filenames according to your images.
+image_files = [
+    "image1.jpg",
+    "image2.jpg",
+    "image3.jpg"
+]
+
+for i, file in enumerate(image_files, start=1):
+
+    # Read image using OpenCV
+    image = cv2.imread(file)
+
+    if image is None:
+        print(f"Could not find: {file}")
+        continue
+
+    # Resize image to 224x224
+    resized_image = cv2.resize(image, (224, 224))
+
+    # Save resized image
+    output_path = f"resized_images/resized_{i}.jpg"
+    cv2.imwrite(output_path, resized_image)
+
+    print(f"Saved: {output_path}")
+
+
+# ============================================================
+# TASK 2
+# Convert a colored image to grayscale and back to RGB
+# Display Original, Grayscale and RGB images
+# ============================================================
+
+# Select any color image
+image_path = "image1.jpg"
+
+# Read image using OpenCV
+original = cv2.imread(image_path)
+
+if original is None:
+    raise FileNotFoundError("Please check the image path.")
+
+# Convert BGR to RGB for displaying with matplotlib
+original_rgb = cv2.cvtColor(original, cv2.COLOR_BGR2RGB)
+
+# Convert color image to grayscale
+gray_image = cv2.cvtColor(original, cv2.COLOR_BGR2GRAY)
+
+# Convert grayscale image back to RGB
+rgb_image = cv2.cvtColor(gray_image, cv2.COLOR_GRAY2RGB)
+
+# Display all three versions
+plt.figure(figsize=(15, 5))
+
+plt.subplot(1, 3, 1)
+plt.imshow(original_rgb)
+plt.title("Original Image")
+plt.axis("off")
+
+plt.subplot(1, 3, 2)
+plt.imshow(gray_image, cmap="gray")
+plt.title("Grayscale Image")
+plt.axis("off")
+
+plt.subplot(1, 3, 3)
+plt.imshow(rgb_image)
+plt.title("Grayscale Converted Back to RGB")
+plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+
+
+# ============================================================
+# TASK 3
+# Apply random rotation and horizontal flip
+# Generate and display 4 augmented versions
+# ============================================================
+
+# Load an image
+image_path = "image2.jpg"
+
+# Open image using PIL
+img = Image.open(image_path).convert("RGB")
+
+# Convert PIL image to NumPy array
+img_array = np.array(img)
+
+# Create ImageDataGenerator
+datagen = ImageDataGenerator(
+    rotation_range=30,
+    horizontal_flip=True
+)
+
+# Add batch dimension
+img_batch = np.expand_dims(img_array, axis=0)
+
+# Generate augmented images
+augmented_images = datagen.flow(
+    img_batch,
+    batch_size=1
+)
+
+# Display 4 augmented images
+plt.figure(figsize=(12, 10))
+
+for i in range(4):
+
+    # Generate next augmented image
+    augmented_image = next(augmented_images)[0].astype(np.uint8)
+
+    plt.subplot(2, 2, i + 1)
+    plt.imshow(augmented_image)
+    plt.title(f"Augmented Image {i + 1}")
+    plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+
+
+# ============================================================
+# TASK 4
+# Increase and decrease brightness by 40%
+# using ImageDataGenerator brightness_range
+# ============================================================
+
+# Load image
+image_path = "image1.jpg"
+
+img = Image.open(image_path).convert("RGB")
+img_array = np.array(img)
+
+# ------------------------------------------------------------
+# Brightness increase
+# brightness_range=(1.4, 1.4)
+# ------------------------------------------------------------
+
+bright_datagen = ImageDataGenerator(
+    brightness_range=(1.4, 1.4)
+)
+
+bright_batch = np.expand_dims(img_array, axis=0)
+
+bright_generator = bright_datagen.flow(
+    bright_batch,
+    batch_size=1
+)
+
+bright_image = next(bright_generator)[0].astype(np.uint8)
+
+
+# ------------------------------------------------------------
+# Brightness decrease
+# brightness_range=(0.6, 0.6)
+# ------------------------------------------------------------
+
+dark_datagen = ImageDataGenerator(
+    brightness_range=(0.6, 0.6)
+)
+
+dark_batch = np.expand_dims(img_array, axis=0)
+
+dark_generator = dark_datagen.flow(
+    dark_batch,
+    batch_size=1
+)
+
+dark_image = next(dark_generator)[0].astype(np.uint8)
+
+
+# Display original, brightened and darkened images
+plt.figure(figsize=(15, 5))
+
+plt.subplot(1, 3, 1)
+plt.imshow(img_array)
+plt.title("Original Image")
+plt.axis("off")
+
+plt.subplot(1, 3, 2)
+plt.imshow(bright_image)
+plt.title("Brightness Increased by 40%")
+plt.axis("off")
+
+plt.subplot(1, 3, 3)
+plt.imshow(dark_image)
+plt.title("Brightness Decreased by 40%")
+plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+
+
+# ============================================================
+# TASK 5
+# Apply shear transformation using ImageDataGenerator
+# ============================================================
+
+# Load meme/cricket image
+image_path = "image3.jpg"
+
+img = Image.open(image_path).convert("RGB")
+img_array = np.array(img)
+
+# Create ImageDataGenerator with shear transformation
+shear_datagen = ImageDataGenerator(
+    shear_range=30
+)
+
+# Add batch dimension
+shear_batch = np.expand_dims(img_array, axis=0)
+
+# Generate sheared image
+shear_generator = shear_datagen.flow(
+    shear_batch,
+    batch_size=1
+)
+
+sheared_image = next(shear_generator)[0].astype(np.uint8)
+
+# Display original and sheared image
+plt.figure(figsize=(10, 5))
+
+plt.subplot(1, 2, 1)
+plt.imshow(img_array)
+plt.title("Original Image")
+plt.axis("off")
+
+plt.subplot(1, 2, 2)
+plt.imshow(sheared_image)
+plt.title("Sheared Image")
+plt.axis("off")
+
+plt.tight_layout()
+plt.show()
+
+print("Explanation:")
+print("Shearing slants or tilts the image, making objects appear horizontally or vertically shifted.")
