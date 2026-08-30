@@ -1,0 +1,341 @@
+# ============================================================
+# TRANSFER LEARNING USING PRETRAINED CNN MODELS
+# ResNet50, VGG16 and InceptionV3
+# ============================================================
+
+import numpy as np
+import tensorflow as tf
+from tensorflow import keras
+
+from tensorflow.keras import layers
+from tensorflow.keras.models import Model
+from tensorflow.keras.applications import ResNet50, VGG16, InceptionV3
+from tensorflow.keras.applications.vgg16 import preprocess_input as vgg_preprocess
+from tensorflow.keras.applications.inception_v3 import preprocess_input as inception_preprocess
+from tensorflow.keras.preprocessing.image import ImageDataGenerator
+
+
+# ============================================================
+# TASK 1
+# Load ResNet50 with pretrained ImageNet weights
+# Print model summary and count trainable layers
+# ============================================================
+
+print("=" * 60)
+print("TASK 1 - RESNET50")
+print("=" * 60)
+
+resnet50_model = ResNet50(
+    weights="imagenet",
+    include_top=True
+)
+
+# Print model architecture
+resnet50_model.summary()
+
+# Count trainable layers
+trainable_layers = sum(
+    1 for layer in resnet50_model.layers
+    if layer.trainable
+)
+
+print("Total number of layers:", len(resnet50_model.layers))
+print("Number of trainable layers:", trainable_layers)
+
+
+# ============================================================
+# TASK 2
+# Use VGG16 as a feature extractor
+# Process a batch of 10 CIFAR-10 images
+# ============================================================
+
+print("\n" + "=" * 60)
+print("TASK 2 - VGG16 FEATURE EXTRACTION")
+print("=" * 60)
+
+# Load CIFAR-10 dataset
+(x_train, y_train), (x_test, y_test) = keras.datasets.cifar10.load_data()
+
+# Select 10 images
+images = x_train[:10]
+
+# VGG16 expects 224x224 images
+images_resized = tf.image.resize(images, (224, 224))
+
+# Convert to NumPy array
+images_resized = images_resized.numpy()
+
+# Preprocess images according to VGG16 requirements
+images_preprocessed = vgg_preprocess(images_resized)
+
+# Load VGG16 without the classification top
+vgg16_model = VGG16(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+
+# Freeze VGG16 layers
+vgg16_model.trainable = False
+
+# Extract features
+features = vgg16_model.predict(
+    images_preprocessed,
+    verbose=0
+)
+
+print("Input batch shape:", images_preprocessed.shape)
+print("Extracted feature shape:", features.shape)
+
+
+# ============================================================
+# TASK 3
+# Freeze all InceptionV3 layers except the last 30 layers
+# Add custom Dense output layer for 5-class classification
+# Print number of trainable parameters
+# ============================================================
+
+print("\n" + "=" * 60)
+print("TASK 3 - INCEPTIONV3")
+print("=" * 60)
+
+# Load InceptionV3 without its original classification head
+base_inception = InceptionV3(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(299, 299, 3)
+)
+
+# Freeze the complete base model
+base_inception.trainable = False
+
+# Unfreeze only the last 30 layers
+for layer in base_inception.layers[-30:]:
+    layer.trainable = True
+
+# Add custom classification head
+x = base_inception.output
+
+x = layers.GlobalAveragePooling2D()(x)
+
+x = layers.Dropout(0.3)(x)
+
+# 5-class output
+output = layers.Dense(
+    5,
+    activation="softmax"
+)(x)
+
+# Create final model
+inception_model = Model(
+    inputs=base_inception.input,
+    outputs=output
+)
+
+# Compile model
+inception_model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+    loss="categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+# Count trainable parameters
+trainable_params = np.sum([
+    np.prod(variable.shape)
+    for variable in inception_model.trainable_variables
+])
+
+print("Total trainable parameters:", trainable_params)
+
+# Optional: print summary
+inception_model.summary()
+
+
+# ============================================================
+# TASK 4
+# Fine-tune ResNet50 by unfreezing last 10 layers
+# Train on a small food-image dataset for 2 epochs
+#
+# Dataset folder structure should be:
+#
+# food_dataset/
+# ├── class1/
+# │   ├── image1.jpg
+# │   ├── image2.jpg
+# │   └── ...
+# ├── class2/
+# │   ├── image1.jpg
+# │   ├── image2.jpg
+# │   └── ...
+#
+# At least 2 classes are required.
+# ============================================================
+
+print("\n" + "=" * 60)
+print("TASK 4 - RESNET50 FINE-TUNING")
+print("=" * 60)
+
+# Change this path to the location of your food dataset
+DATASET_PATH = "food_dataset"
+
+# ImageDataGenerator for ResNet50
+food_datagen = ImageDataGenerator(
+    preprocessing_function=tf.keras.applications.resnet50.preprocess_input,
+    validation_split=0.2
+)
+
+# Training data
+train_data = food_datagen.flow_from_directory(
+    DATASET_PATH,
+    target_size=(224, 224),
+    batch_size=16,
+    class_mode="categorical",
+    subset="training",
+    shuffle=True
+)
+
+# Validation data
+validation_data = food_datagen.flow_from_directory(
+    DATASET_PATH,
+    target_size=(224, 224),
+    batch_size=16,
+    class_mode="categorical",
+    subset="validation",
+    shuffle=False
+)
+
+# Number of classes
+num_classes = train_data.num_classes
+
+print("Number of classes:", num_classes)
+print("Class names:", train_data.class_indices)
+
+
+# ------------------------------------------------------------
+# Load pretrained ResNet50 without ImageNet classification head
+# ------------------------------------------------------------
+
+base_resnet = ResNet50(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(224, 224, 3)
+)
+
+# Freeze all layers
+base_resnet.trainable = False
+
+# Unfreeze last 10 layers
+for layer in base_resnet.layers[-10:]:
+    layer.trainable = True
+
+
+# ------------------------------------------------------------
+# Add custom classification head
+# ------------------------------------------------------------
+
+x = base_resnet.output
+
+x = layers.GlobalAveragePooling2D()(x)
+
+x = layers.Dropout(0.3)(x)
+
+output = layers.Dense(
+    num_classes,
+    activation="softmax"
+)(x)
+
+fine_tune_model = Model(
+    inputs=base_resnet.input,
+    outputs=output
+)
+
+
+# ------------------------------------------------------------
+# Compile model
+# ------------------------------------------------------------
+
+fine_tune_model.compile(
+    optimizer=keras.optimizers.Adam(learning_rate=0.0001),
+    loss="categorical_crossentropy",
+    metrics=["accuracy"]
+)
+
+
+# ------------------------------------------------------------
+# Train for 2 epochs
+# ------------------------------------------------------------
+
+history = fine_tune_model.fit(
+    train_data,
+    validation_data=validation_data,
+    epochs=2
+)
+
+
+# ------------------------------------------------------------
+# Report training accuracy after last epoch
+# ------------------------------------------------------------
+
+final_training_accuracy = history.history["accuracy"][-1]
+
+print("\nTraining accuracy after last epoch:")
+print(final_training_accuracy)
+
+print(
+    "Training accuracy percentage:",
+    final_training_accuracy * 100,
+    "%"
+)
+
+
+# ============================================================
+# TASK 5
+# InceptionV3 with all layers frozen and custom binary
+# classification head with Dropout
+# ============================================================
+
+print("\n" + "=" * 60)
+print("TASK 5 - INCEPTIONV3 BINARY CLASSIFICATION")
+print("=" * 60)
+
+# Load InceptionV3 without original classification layer
+inception_base = InceptionV3(
+    weights="imagenet",
+    include_top=False,
+    input_shape=(299, 299, 3)
+)
+
+# Freeze all pretrained layers
+inception_base.trainable = False
+
+# Add custom classification head
+x = inception_base.output
+
+x = layers.GlobalAveragePooling2D()(x)
+
+# Dropout helps reduce overfitting
+x = layers.Dropout(0.5)(x)
+
+# Binary classification output
+output = layers.Dense(
+    1,
+    activation="sigmoid"
+)(x)
+
+# Create final model
+binary_inception_model = Model(
+    inputs=inception_base.input,
+    outputs=output
+)
+
+# Compile for binary classification
+binary_inception_model.compile(
+    optimizer="adam",
+    loss="binary_crossentropy",
+    metrics=["accuracy"]
+)
+
+# Print model summary
+binary_inception_model.summary()
+
+print("InceptionV3 binary classification model compiled successfully.")
